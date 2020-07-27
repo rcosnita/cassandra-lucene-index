@@ -1,4 +1,4 @@
-FROM cassandra:3.11.3 as lucene_index
+FROM cassandra:3.11.6 as lucene_index
 
 RUN apt-get update -y || true && \
     apt-get install -y apt-transport-https ca-certificates && \
@@ -9,10 +9,30 @@ RUN apt-get install -y --fix-missing && \
 
 RUN mkdir -p /home/lucene_index && \
    cd /home/lucene_index && \
-   git clone http://github.com/Stratio/cassandra-lucene-index && \
+   git clone https://github.com/rcosnita/cassandra-lucene-index-1.git cassandra-lucene-index && \
    cd cassandra-lucene-index && \
-   git checkout 3.11.3.0 && \
+   git checkout branch-3.11.6.0 && \
+   export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 && \
+   export PATH=${JAVA_HOME}/bin:${PATH} && \
    mvn clean package -Dmaven.test.skip.exec
 
-FROM cassandra:3.11.3
-COPY --from=lucene_index /home/lucene_index/cassandra-lucene-index/plugin/target/cassandra-lucene-index-plugin-3.11.3.0.jar /usr/share/cassandra/lib/cassandra-lucene-index-plugin-3.11.3.0.jar
+FROM cassandra:3.11.6 as medusa
+
+RUN apt-get update -y && \
+   apt-get install -y python3 python3-venv gcc g++ python3-dev
+
+RUN mkdir /opt/medusa && \
+   cd /opt/medusa && \
+   python3 -m venv .venv && \
+   . .venv/bin/activate && \
+   pip install --upgrade pip && \
+   pip install cassandra-medusa==0.7.0
+
+
+FROM cassandra:3.11.6
+
+RUN apt-get update -y && \
+   apt-get install -y python3
+
+COPY --from=lucene_index /home/lucene_index/cassandra-lucene-index/plugin/target/cassandra-lucene-index-plugin-3.11.6.1-RC1-SNAPSHOT.jar /opt/cassandra/lib//cassandra-lucene-index-plugin-3.11.6.1-RC1-SNAPSHOT.jar
+COPY --from=medusa /opt/medusa /opt/medusa
