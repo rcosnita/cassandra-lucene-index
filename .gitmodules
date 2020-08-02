@@ -1,3 +1,0 @@
-[submodule "third-party/management-api-for-apache-cassandra"]
-	path = third-party/management-api-for-apache-cassandra
-	url = https://github.com/datastax/management-api-for-apache-cassandra.git
